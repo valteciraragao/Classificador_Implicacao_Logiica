@@ -1,26 +1,16 @@
-import streamlit as st 
-from sympy import symbols, Implies 
-from sympy.logic.inference import is_tautology 
-from sklearn.feature_extraction.text import TfidfVectorizer 
-from sklearn.naive_bayes import MultinomialNB 
-import numpy as np 
-import pandas as pd 
-import re
+import streamlit as st from sympy import symbols, Implies from sympy.logic.inference import is_tautology from sklearn.feature_extraction.text import TfidfVectorizer from sklearn.naive_bayes import MultinomialNB import numpy as np import pandas as pd import re
 
-#---- MODELO DE MACHINE LEARNING SIMPLES ----
+---- MODELO DE MACHINE LEARNING SIMPLES ----
 
-exemplos = [ "Se chover, então a rua fica molhada", "Se Pedro é feliz, então Pedro está feliz", "Se estudar, então passa", "Se trabalhar duro, então terá sucesso", "Se a lâmpada estiver queimada, então a sala estará escura" ] 
-rotulos = ["Tautologia", "Tautologia", "Tautologia", "Tautologia", "Contingência"] vectorizer = TfidfVectorizer() 
-X = vectorizer.fit_transform(exemplos) 
-y = np.array(rotulos) modelo = MultinomialNB() modelo.fit(X, y)
+exemplos = [ "Se chover, então a rua fica molhada", "Se Pedro é feliz, então Pedro está feliz", "Se estudar, então passa", "Se trabalhar duro, então terá sucesso", "Se a lâmpada estiver queimada, então a sala estará escura" ] rotulos = ["Tautologia", "Tautologia", "Tautologia", "Tautologia", "Contingência"] vectorizer = TfidfVectorizer() X = vectorizer.fit_transform(exemplos) y = np.array(rotulos) modelo = MultinomialNB() modelo.fit(X, y)
 
-#---- STREAMLIT UI ----
+---- STREAMLIT UI ----
 
 st.set_page_config(page_title="Inferências Lógicas com NL + ML") st.title("🔧 Inferências Lógicas com NL + ML")
 
 entrada_natural = st.text_input("Digite sua condicional em português (Se P, então Q):")
 
-if entrada_natural: # Regex para P e Q   padrao = r"^[Ss]e\s+(.+),\s+ent[aã]o\s+(.+)$" match = re.match(padrao, entrada_natural)
+if entrada_natural: # Regex para P e Q padrao = r"^[Ss]e\s+(.+),\s+ent[aã]o\s+(.+)$" match = re.match(padrao, entrada_natural)
 
 if match:
     p_texto = match.group(1).strip().lower()
