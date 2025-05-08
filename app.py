@@ -40,7 +40,9 @@ if match:
     for (pv, qv) in verdades:
         resultado = Implies(pv, qv)
         tabela.append((int(pv), int(qv), int(resultado)))
-    st.table(["p", "q", "Implies(p,q)"] + tabela)
+    # Exibe tabela
+    df = [dict(p=row[0], q=row[1], **{"Implies(p,q)": row[2]}) for row in tabela]
+    st.table(df)
 
     # ---- LÓGICA EXATA ----
     valor_taut = is_tautology(expressao)
