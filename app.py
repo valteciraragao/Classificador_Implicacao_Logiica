@@ -1,4 +1,11 @@
-import streamlit as st from sympy import symbols, Implies from sympy.logic.inference import is_tautology from sklearn.feature_extraction.text import TfidfVectorizer from sklearn.naive_bayes import MultinomialNB import numpy as np import re
+import streamlit as st
+from sympy import symbols, Implies
+from sympy.logic.inference import satisfiable
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.naive_bayes import MultinomialNB
+import numpy as np
+import pandas as pd
+import re
 
 ---- MODELO DE MACHINE LEARNING SIMPLES ----
 
