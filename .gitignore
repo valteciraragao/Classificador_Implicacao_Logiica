@@ -172,3 +172,48 @@ cython_debug/
 
 # PyPI configuration file
 .pypirc
+
+
+# Ambientes virtuais
+.venv/
+venv/
+ENV/
+
+# Cache do Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Arquivos temporários
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# Configurações locais e credenciais
+.env
+.env.*
+
+# IDEs e editores
+.vscode/
+.idea/
+
+# PyInstaller
+*.spec
+dist/
+build/
+
+# Arquivos de sistema
+.DS_Store
+Thumbs.db
+
+# Streamlit
+.streamlit/config.toml
+
+# Node e Vercel (se usar frontend misto)
+node_modules/
+.vercel/
+
+# Docker
+*.tar
