@@ -62,13 +62,13 @@ def nl_to_expr(frase):
     P_expr = None
     for part in P_parts:
         a = part.strip()
-        atom_expr = Not(mp[a]) if a.startswith("não ") else mp[a]
+        atom_expr = Not(mp[a[4:].strip()]) if a.startswith("não ") else mp[a]
         P_expr = atom_expr if P_expr is None else And(P_expr, atom_expr)
 
     Q_expr = None
     for part in Q_parts:
         a = part.strip()
-        atom_expr = Not(mp[a]) if a.startswith("não ") else mp[a]
+        atom_expr = Not(mp[a[4:].strip()]) if a.startswith("não ") else mp[a]
         Q_expr = atom_expr if Q_expr is None else Or(Q_expr, atom_expr)
 
     expr = Implies(P_expr, Q_expr)
@@ -122,43 +122,24 @@ st.markdown("""
 st.title("🔧 Inferências Lógicas com NL + ML")
 st.markdown("<hr>", unsafe_allow_html=True)
 
-frase = st.text_input(
-    "<span title='Digite uma frase condicional: Se P, então Q.'>"
-    "Digite sua condicional em português:</span>",
-    "",
-    unsafe_allow_html=True
-)
+frase = st.text_input("Digite sua condicional em português (ex: Se João estuda, então ele passa):")
 
 if frase:
     atom, expr, sym_str, Q_txt = nl_to_expr(frase)
     if not expr:
         st.error("⚠️ Formato inválido! Use ‘Se P, então Q.’")
     else:
-        # Átomos
-        st.subheader(
-            "<span title='Componentes atômicos extraídos.'>📌 Proposições Atômicas ℹ️</span>",
-            unsafe_allow_html=True
-        )
+        st.subheader("📌 Proposições Atômicas ℹ️")
         for i, a in enumerate(atom):
             cor = "#27ae60" if i%2==0 else "#f39c12"
-            st.markdown(f"<span style='color:{cor}'>**{chr(112+i)}:** {a}</span>",
-                        unsafe_allow_html=True)
+            st.markdown(f"<span style='color:{cor}'>**{chr(112+i)}:** {a}</span>", unsafe_allow_html=True)
 
-        # Simbólica
-        st.subheader(
-            "<span title='Expressão simbólica usada para calcular.'>"
-            "⚙️ Expressão Simbólica ℹ️</span>",
-            unsafe_allow_html=True
-        )
-        st.markdown(f"<code style='color:#bbb'>{sym_str}</code>",
-                    unsafe_allow_html=True)
+        st.subheader("⚙️ Expressão Simbólica ℹ️")
+        st.markdown(f"<code style='color:#bbb'>{sym_str}</code>", unsafe_allow_html=True)
 
-        # ML prevê
         pred = ml.predict([sym_str])[0]
-        st.markdown(f"**[ML] Tipo previsto:** <span style='color:#e74c3c'>{pred}</span>",
-                    unsafe_allow_html=True)
+        st.markdown(f"**[ML] Tipo previsto:** <span style='color:#e74c3c'>{pred}</span>", unsafe_allow_html=True)
 
-        # Tabela-verdade com contra-exemplo
         cols, data, real = tabela_e_tipo(expr)
         if data:
             counter = [ (idx, row) for idx,row in enumerate(data) if row[-1]==0 ]
@@ -167,40 +148,25 @@ if frase:
                 vals = ", ".join(f"{cols[i]}={row[i]}" for i in range(len(cols)-1))
                 st.warning(f"🚨 **Contra‑exemplo (linha {idx}):** {vals} ⇒ Resultado=0")
 
-            st.subheader(
-                "<span title='Todas as combinações de valores e resultados.'>"
-                "🧮 Tabela‑Verdade ℹ️</span>",
-                unsafe_allow_html=True
-            )
+            st.subheader("🧮 Tabela‑Verdade ℹ️")
             rows = [dict(zip(cols, r)) for r in data]
             st.table(rows)
 
-        # Tipo exato
         cor_tipo = {"Tautologia":"#2ecc71","Contradição":"#e74c3c","Contingência":"#f1c40f"}
-        st.markdown(
-            f"**[Lógica Exata]**: <span style='color:{cor_tipo[real]}'>{real}</span>",
-            unsafe_allow_html=True
-        )
+        st.markdown(f"**[Lógica Exata]**: <span style='color:{cor_tipo[real]}'>{real}</span>", unsafe_allow_html=True)
 
-        # Feedback ML vs real
         if pred == real:
             st.success("✅ ML e Lógica concordam!")
             st.balloons()
         else:
             st.warning("⚠️ ML divergiu; confira acima.")
 
-        # Interpretação Natural
         P_txt = atom[0]
         if real == "Tautologia":
-            st.markdown(
-                f"✅ **Interpretação Natural:**  \n> **{P_txt}** implica que **{Q_txt}**."
-            )
+            st.markdown(f"✅ **Interpretação Natural:**  \n> **{P_txt}** implica que **{Q_txt}**.")
         else:
-            st.markdown(
-                f"❌ **Interpretação Natural:**  \n> **{P_txt}** *não* implica que **{Q_txt}**."
-            )
+            st.markdown(f"❌ **Interpretação Natural:**  \n> **{P_txt}** *não* implica que **{Q_txt}**.")
 
-        # Atualiza histórico
         st.session_state.history.append({
             'Frase': frase,
             'Simbólica': sym_str,
@@ -208,18 +174,13 @@ if frase:
             'Exata': real
         })
 
-        # Exibe histórico
         st.subheader("📜 Histórico de Análises")
         df_hist = pd.DataFrame(st.session_state.history)
         st.dataframe(df_hist)
 
         csv = df_hist.to_csv(index=False).encode('utf-8')
-        st.download_button(
-            "⬇️ Baixar histórico CSV",
-            data=csv,
-            file_name="historico_inferencias.csv",
-            mime="text/csv"
-        )
+        st.download_button("⬇️ Baixar histórico CSV", data=csv,
+                           file_name="historico_inferencias.csv", mime="text/csv")
 
 # Rodapé
 st.markdown("""
@@ -227,8 +188,8 @@ st.markdown("""
     <div style='display:flex;justify-content:space-between;
                 font-size:0.9em;color:#888;padding-top:10px;'>
       <div>
-        👤 **Autores:** Valtecir Aragão // Matheus Barbosa // Pedro Favato // Iago Xavier  
-        🎓 **Faculdade:** CEFET-RJ – Sistemas de Informação – Lógica Computacional
+        👤 <b>Autores:</b> Valtecir Aragão, Matheus Barbosa, Pedro Favato, Iago Xavier  
+        🎓 <b>Curso:</b> CEFET-RJ – Sistemas de Informação – Lógica Computacional
       </div>
       <div>
         🔗 <a href='https://www.linkedin.com/in/valteciraragao' style='color:#4a90e2;'>LinkedIn</a>
