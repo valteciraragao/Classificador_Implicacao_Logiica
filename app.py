@@ -7,11 +7,11 @@ import numpy as np
 import pandas as pd 
 import re
 
-#---- MODELO DE MACHINE LEARNING SIMPLES ----
+---- MODELO DE MACHINE LEARNING SIMPLES ----
 
 exemplos = [ "Se chover, então a rua fica molhada", "Se Pedro é feliz, então Pedro está feliz", "Se estudar, então passa", "Se trabalhar duro, então terá sucesso", "Se a lâmpada estiver queimada, então a sala estará escura" ] rotulos = ["Tautologia", "Tautologia", "Tautologia", "Tautologia", "Contingência"] vectorizer = TfidfVectorizer() X = vectorizer.fit_transform(exemplos) y = np.array(rotulos) modelo = MultinomialNB() modelo.fit(X, y)
 
-#---- STREAMLIT UI ----
+---- STREAMLIT UI ----
 
 st.set_page_config(page_title="Inferências Lógicas com NL + ML") st.title("🔧 Inferências Lógicas com NL + ML")
 
