@@ -1,204 +1,77 @@
-import streamlit as st import re import joblib import pandas as pd from sympy import symbols, Implies, And, Or, Not from sympy.logic.boolalg import truth_table
+import streamlit as st from sympy import symbols, Implies, Not, And, Or, truth_table from sympy.logic.boolalg import is_tautology, is_cnf, is_dnf from sklearn.feature_extraction.text import TfidfVectorizer from sklearn.naive_bayes import MultinomialNB import numpy as np import re
 
-----------------------
+st.set_page_config(page_title="Inferências Lógicas com NL + ML", page_icon="🔧") st.title("🔧 Inferências Lógicas com NL + ML") st.markdown("Digite sua condicional em português (Se P, então Q):")
 
-Tokenizer para ML
+Função para extrair proposições atômicas
 
-----------------------
+def extrair_proposicoes(frase): frase = frase.lower() padrao = r"se (.+?), ent[aã]o (.+)" correspondencia = re.match(padrao, frase) if correspondencia: return correspondencia.group(1).strip(), correspondencia.group(2).strip() return None, None
 
-def tokenizer(expr): return re.findall(r'->|→|\w+|[~&|()¬]', expr)
+Função para gerar expressão simbólica
 
-----------------------
+def gerar_expressao(p, q): p_sym, q_sym = symbols('p q') return Implies(p_sym, q_sym), p_sym, q_sym
 
-Treinamento ML (uma vez)
+Função para gerar tabela verdade
 
-----------------------
+def gerar_tabela_verdade(expr, atoms): tabela = [] for i, val in enumerate(truth_table(expr, atoms)): entrada, saida = val.args linha = list(entrada) + [int(saida)] tabela.append(linha) return tabela
 
-def treinar_ml(): X = [ "(p)->(p|q)", "(p&q)->p", "((p|q)&(~p))->q", "((p)&(p->q))->q", "((~q)&(p->q))->(~p)", "(p)->p", "(p&~p)->q", ] y = ["Tautologia"]*5 + ["Contingência", "Tautologia"]
+Função para prever com ML (simples exemplo com Naive Bayes)
 
-from sklearn.feature_extraction.text import CountVectorizer
-from sklearn.naive_bayes import MultinomialNB
-from sklearn.pipeline import make_pipeline
+corpus = [ "se chover, então a rua fica molhada", "se estudar, então passa na prova", "se estiver com febre, então está doente", "se p, então q" ] tipos = ["tautologia", "tautologia", "contingência", "tautologia"] vectorizer = TfidfVectorizer() X = vectorizer.fit_transform(corpus) y = np.array(tipos) clf = MultinomialNB().fit(X, y)
 
-clf = make_pipeline(
-    CountVectorizer(tokenizer=tokenizer, token_pattern=None),
-    MultinomialNB()
-)
-clf.fit(X, y)
-joblib.dump(clf, "ml_inferencia.joblib")
-return clf
+def prever_tipo(frase): X_test = vectorizer.transform([frase]) return clf.predict(X_test)[0]
 
-Carrega ou treina
+Função para interpretação natural
 
-try: ml = joblib.load("ml_inferencia.joblib") except FileNotFoundError: ml = treinar_ml()
+def gerar_interpretacao(atoms, tipo): p, q = atoms interp = f"{p} não implica que {q} (tipo: {tipo})." if tipo == "tautologia": interp = f"Sempre que {p}, então {q} — ou seja, uma {tipo}." elif tipo == "contradição": interp = f"Nunca ocorre de {p} implicar {q} — isso é uma {tipo}." return interp
 
-----------------------
+Entrada do usuário
 
-Conversão NL → simbólica
+frase = st.text_input("Digite aqui:")
 
-----------------------
+if frase: p_texto, q_texto = extrair_proposicoes(frase)
 
-def nl_to_expr(frase): # Normaliza texto text = frase.lower().strip() text = text.replace("entao", "então").rstrip('.') # Regex para P e Q m = re.match(r"^(se|quando|caso)\s+(.?)(?:,\sent[aã]o\s+|\s+ent[aã]o\s+)(.*)$", text) if not m: return None, None, None, None
-
-P_txt = m.group(2).strip()
-Q_txt = m.group(3).strip()
-
-# Divide conjunções e disjunções simples
-P_parts = re.split(r"\s+e\s+", P_txt)
-Q_parts = re.split(r"\s+ou\s+", Q_txt)
-
-# Coleta átomos
-atom = []
-for part in P_parts + Q_parts:
-    a = part.strip()
-    if a and a not in atom:
-        atom.append(a)
-
-# Gera símbolos p, q, r...
-simb = symbols(' '.join(chr(112 + i) for i in range(len(atom))))
-
-# Verifica tamanhos iguais
-if len(atom) != len(simb):
-    raise ValueError(f"Erro ao mapear símbolos: atom={atom}, simb={simb}")
-
-mp = {atom[i]: simb[i] for i in range(len(atom))}
-
-# Monta expressão P
-P_expr = None
-for part in P_parts:
-    a = part.strip()
-    if a.startswith("não "):
-        name = a[5:].strip()
-        atom_expr = Not(mp.get(name, mp.get(a)))
-    else:
-        atom_expr = mp[a]
-    P_expr = atom_expr if P_expr is None else And(P_expr, atom_expr)
-
-# Monta expressão Q
-Q_expr = None
-for part in Q_parts:
-    a = part.strip()
-    if a.startswith("não "):
-        name = a[5:].strip()
-        atom_expr = Not(mp.get(name, mp.get(a)))
-    else:
-        atom_expr = mp[a]
-    Q_expr = atom_expr if Q_expr is None else Or(Q_expr, atom_expr)
-
-expr = Implies(P_expr, Q_expr)
-sym_str = str(expr)
-return atom, expr, sym_str, Q_txt
-
-----------------------
-
-Gera tabela e tipo
-
-----------------------
-
-def tabela_e_tipo(expr): vars_ = sorted(expr.free_symbols, key=lambda v: v.name) tbl = list(truth_table(expr, vars_)) vals = [bool(row[1]) for row in tbl]
-
-if all(vals):
-    tipo = "Tautologia"
-elif not any(vals):
-    tipo = "Contradição"
+if not p_texto or not q_texto:
+    st.error("Frase inválida. Use o formato: 'Se P, então Q'.")
 else:
-    tipo = "Contingência"
+    st.markdown("### 📌 Proposições Atômicas")
+    st.write(f"**p:** {p_texto}")
+    st.write(f"**q:** {q_texto}")
 
-cols = [str(v) for v in vars_] + [str(expr)]
-data = []
-for row in tbl:
-    vals_row, result = row[0], row[1]
-    data.append([int(v) for v in vals_row] + [int(bool(result))])
+    expr, p_sym, q_sym = gerar_expressao(p_texto, q_texto)
+    st.markdown("### ⚙️ Expressão Simbólica")
+    st.code(f"Implies(p, q)")
 
-return cols, data, tipo
+    tipo_ml = prever_tipo(frase)
+    st.markdown(f"**[ML] Tipo previsto:** {tipo_ml.capitalize()}")
 
-----------------------
+    tabela = gerar_tabela_verdade(expr, [p_sym, q_sym])
 
-Inicia estado de histórico
+    contra_exemplo = next((linha for linha in tabela if linha[-1] == 0), None)
+    if contra_exemplo:
+        st.markdown(f"🚨 **Contra‑exemplo (linha {tabela.index(contra_exemplo)+1}):** p={contra_exemplo[0]}, q={contra_exemplo[1]} ⇒ **Resultado**=0")
 
-----------------------
+    st.markdown("### 🧮 Tabela‑Verdade")
+    st.table([["p", "q", "Implies(p, q)"]] + tabela)
 
-if 'history' not in st.session_state: st.session_state.history = []
+    tipo = "tautologia" if all(linha[-1] == 1 for linha in tabela) else (
+            "contradição" if all(linha[-1] == 0 for linha in tabela) else "contingência")
 
-----------------------
+    final_tipo = tipo
+    if tipo_ml != tipo:
+        st.warning("ML divergiu; confira a tabela acima.")
+        final_tipo = tipo  # sempre adotar a lógica exata como referência
 
-Streamlit UI
+    st.markdown(f"**[Lógica Exata]**: {final_tipo.capitalize()}")
 
-----------------------
+    st.markdown("### ❌ **Interpretação Natural:**")
+    interpretacao = gerar_interpretacao((p_texto, q_texto), final_tipo)
+    st.markdown(f"\n> {interpretacao}")
 
-st.set_page_config(page_title="Inferências Lógicas Avançadas", layout="wide")
+    st.markdown("### 📜 Histórico de Análises")
+    st.markdown("""
+       
+ 👤 **Autores:** Valtecir Aragão // Matheus Barbosa // Pedro Favato // Iago Xavier       🎓 **Faculdade:** CEFET-RJ – Sistemas de Informação – Lógica Computacional   
 
-st.title("🔧 Inferências Lógicas com NL + ML")
-
-frase = st.text_input( "Digite sua condicional em português (ex: Se P, então Q):", "" )
-
-if frase: atom, expr, sym_str, Q_txt = nl_to_expr(frase) if expr is None: st.error("⚠️ Formato inválido! Use 'Se P, então Q.'") else: # Átomos st.subheader("📌 Proposições Atômicas") for i, a in enumerate(atom): cor = "#27ae60" if i % 2 == 0 else "#f39c12" st.markdown(f"{chr(112+i)}: {a}")
-
-# Expressão simbólica
-    st.subheader("⚙️ Expressão Simbólica")
-    st.code(sym_str)
-
-    # ML prevê
-    pred = ml.predict([sym_str])[0]
-    st.markdown(f"**[ML] Tipo previsto:** **{pred}**")
-
-    # Tabela-verdade
-    cols, data, real = tabela_e_tipo(expr)
-    # Contra-exemplo
-    counter = [(idx, row) for idx, row in enumerate(data) if row[-1] == 0]
-    if counter:
-        idx, row = counter[0]
-        vals = ", ".join(f"{cols[i]}={row[i]}" for i in range(len(cols)-1))
-        st.warning(f"🚨 Contra-exemplo (linha {idx}): {vals} ⇒ Resultado=0")
-
-    st.subheader("🧮 Tabela‑Verdade")
-    df = pd.DataFrame(data, columns=cols)
-    st.table(df)
-
-    # Tipo exato
-    cor_tipo = {"Tautologia": "#2ecc71", "Contradição": "#e74c3c", "Contingência": "#f1c40f"}
-    st.markdown(f"**[Lógica Exata]:** **{real}**")
-
-    # Feedback
-    if pred == real:
-        st.success("✅ ML e Lógica concordam!")
-        st.balloons()
-    else:
-        st.warning("⚠️ ML divergiu; confira acima.")
-
-    # Interpretação Natural
-    P_txt = atom[0]
-    if real == "Tautologia":
-        st.markdown(f"✅ **Interpretação Natural:** {P_txt} implica que {Q_txt}.")
-    else:
-        st.markdown(f"❌ **Interpretação Natural:** {P_txt} NÃO implica que {Q_txt}.")
-
-    # Histórico
-    st.session_state.history.append({
-        'Frase': frase,
-        'Simbólica': sym_str,
-        'ML': pred,
-        'Exata': real
-    })
-
-    st.subheader("📜 Histórico de Análises")
-    df_hist = pd.DataFrame(st.session_state.history)
-    st.dataframe(df_hist)
-
-    csv = df_hist.to_csv(index=False).encode('utf-8')
-    st.download_button(
-        "⬇️ Baixar histórico CSV",
-        data=csv,
-        file_name="historico_inferencias.csv",
-        mime="text/csv"
-    )
-
-Rodapé
-
-st.markdown( """ 👤 Autores: Valtecir Aragão // Matheus Barbosa // Pedro Favato // Iago Xavier 🎓 Faculdade: CEFET-RJ – Sistemas de Informação – Lógica Computacional
-
-🔗 [LinkedIn](https://www.linkedin.com/in/valteciraragao)
-"""
-
-)
+ 🔗 [LinkedIn](https://www.linkedin.com/in/valteciraragao)
+    """)
 
